@@ -18,7 +18,6 @@
  var volume = INIT_VOL;
  var queue = [];
  var playing = false;
- //var request = require("request");
  var ytdl = require('ytdl-core');
  var connectionGlobal;
 
@@ -29,7 +28,6 @@
  //playlists: probably files with links in them and potentially a way to update said playlists
  //kill queue command: will kill the entire queue or specific person's queue
  //option to normal queueing or rotating queueing
- //add add command seperate from play
  //add display queue command
  //potentially find out why it sometimes doesn't work
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -86,31 +84,23 @@
     if(message.content.startsWith("play:")) {
         if(message.member.voiceChannelID) {
             //play given link
-            var link;
+            var linkcallback = (link)=>{
+                queue.push(link);
+                message.member.voiceChannel.join()
+                .then(connection =>{
+                    //message.channel.send("OwO has arrived");
+                    connectionGlobal = connection
+                    Play(connectionGlobal);
+                }).catch(console.log); 
+            };
+            
             if(message.content.substring(message.content.indexOf(":")+1).includes(YOUTUBE_URL_VIDEO)){
-                link = message.content.substring(message.content.indexOf(":")+1);
+                var link = message.content.substring(message.content.indexOf(":")+1);
+                linkcallback(link);
             }
-            //request last song played
-            else if(message.content.substring(message.content.indexOf(":")+1) == 'last')
-                if(last_played)
-                    link = last_played;
-                else {
-                    message.channel.send("Please request a song before asking for the last one played")
-                    return;
-                }
-                    
-            //search then play search result
-            else {
-                let search = message.content.substring(message.content.indexOf(":")+1);
-                link = getUTubeURL(search,1);
-            }
-            queue.push(link);
-            message.member.voiceChannel.join()
-            .then(connection =>{
-                //message.channel.send("OwO has arrived");
-                connectionGlobal = connection
-                Play(connectionGlobal);
-            }).catch(console.log);
+
+            else
+                getUTubeURL(message.content.substring(message.content.indexOf(":")+1), 1, linkcallback);
         }
         else {
             message.channel.send("Get in a voice channel and try again.");
@@ -182,8 +172,9 @@
                 message.channel.send("Invalid search request.  The search has been set to 1.");
         }
         var urlString = "";
-        urlString = getUTubeURL(search,numURLs);
-        message.channel.send(urlString);
+        getUTubeURL(search,numURLs,(urlString)=>{
+            message.channel.send(urlString);
+        });
     }
  }
 
@@ -215,51 +206,49 @@
  //urls will be returned in address with the first youtube vid url
  //urls do not include ads or playlists
  //recommended that address not be initalized with a size more than 15 because the search is at max 20 urls, but ads and playlists will be skipped
- function getUTubeURL(search,numURLs){
+ function getUTubeURL(search,numURLs,callback){
 
     var address = new Array(numURLs)
     var title = new Array(numURLs) 
     //address[0] = "";
 
     while(search.includes(" ")) //Replaces all of the spaces in the search request with '+'
-               search = search.substring(0,search.indexOf(" "))+"+"+search.substring(search.indexOf(" ")+1);
+        search = search.substring(0,search.indexOf(" "))+"+"+search.substring(search.indexOf(" ")+1);
 
-    htmlStuff(search,numURLs,address,title);
+    var rp = require('request-promise');
+    rp(YOUTUBE_URL_SEARCH+search)
+        .then( function(htmlString) {
+            //console.log(htmlString)
+            var end = false;
+            let x = 0;
+            while((!end)&&(x<numURLs)){
+                if(htmlString.indexOf(HTML_URL_INDEX)!=-1){ //-1 if not found
+                    htmlString = htmlString.substring(200);
+                    htmlString = htmlString.substring(htmlString.indexOf(HTML_URL_INDEX));
+                    address[x] = htmlString.substring(htmlString.indexOf("id=")+4, htmlString.indexOf("\" ",htmlString.indexOf("id=")));
+                    
+                    htmlString = htmlString.substring(htmlString.indexOf(HTML_NAME_INDEX));
+                    title[x] = htmlString.substring(htmlString.indexOf("title=")+7, htmlString.indexOf("\" ",htmlString.indexOf("title=")));
+                    x++;
+                }
+                else{
+                    end = true;
+                    console.log("ERROR: To many urls requested or invalid search");
+                    console.log(x+" urls have been returned");
+                }
+            }
+            numURLs = x;
 
-    var urlString = ""; //turns array of urls into one string to send, to allow for smoother output.
+            var urlString = ""; //turns array of urls into one string to send, to allow for smoother output.
     
-    for(var i = 0; i < numURLs; i++)
-        urlString += YOUTUBE_URL_VIDEO+address[i]+"\n";
-    return urlString;
- }
+            for(var i = 0; i < numURLs; i++)
+                urlString += YOUTUBE_URL_VIDEO+address[i]+"\n";
 
- ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
- function htmlStuff(search,numURLs,address,title){
-    var request = require('sync-request');
-    var res = request('GET', YOUTUBE_URL_SEARCH+search)
-    var htmlString = res.body.toString();
-    //console.log(htmlString)
-    var end = false;
-    let x = 0;
-    while((!end)&&(x<numURLs)){
-        if(htmlString.indexOf(HTML_URL_INDEX)!=-1){ //-1 if not found
-            htmlString = htmlString.substring(200);
-            htmlString = htmlString.substring(htmlString.indexOf(HTML_URL_INDEX));
-            address[x] = htmlString.substring(htmlString.indexOf("id=")+4, htmlString.indexOf("\" ",htmlString.indexOf("id=")));
-            
-            htmlString = htmlString.substring(htmlString.indexOf(HTML_NAME_INDEX));
-            title[x] = htmlString.substring(htmlString.indexOf("title=")+7, htmlString.indexOf("\" ",htmlString.indexOf("title=")));
-            x++;
-        }
-        else{
-            end = true;
-            console.log("ERROR: To many urls requested or invalid search");
-            console.log(x+" urls have been returned");
-        }
-    }
-    numURLs = x;
-    return;
+            callback(urlString)
+        })
+        .catch(function (err) {
+            console.log("there was an oopsies");
+        });
  }
 
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
