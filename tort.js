@@ -1,7 +1,11 @@
  "use strict";
  const Discord = require('discord.js')
+
+ const fs = require('fs')
+ let jsonData = JSON.parse(fs.readFileSync('settings.json', 'utf-8'))
+ const TOKEN = jsonData.token;
+ 
  const bot = new Discord.Client();
- const TOKEN = 'NTQxMzM4ODIwNzcyMjMzMjMx.DzfPZQ.YygmmoKMCeYgD2fcOY0mca6QNX8';
  const BOT_ID = '541338820772233231';
  const OWNER_ID = '192461753542639617';
  const OWNER_ID2 = '323218204014936069';
