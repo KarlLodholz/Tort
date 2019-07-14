@@ -17,17 +17,15 @@
  const TEST_CHANNEL_ID = 428015548325036032;
  const MUSIC_CHANNEL_ID = 598554308585455629;
  const HTML_URL_INDEX = "<li><div class=\"yt-lockup yt-lockup-tile yt-lockup-video vve-check clearfix\" data-context-item-id=\""
- const HTML_NAME_INDEX = "class=\"yt-uix-tile-link yt-ui-ellipsis yt-ui-ellipsis-2 yt-uix-sessionlink"
- var last_played="";
  var volume = INIT_VOL;
  var queue = [];
  var playing = false;
  var ytdl = require('ytdl-core');
  var connectionGlobal;
+ var rp = require('request-promise');
 
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  //POTENTIAL ADD-ONS
- //soundcloud compatability
  //rotating queue: will play one song from someone, then the next is from someone else
  //playlists: probably files with links in them and potentially a way to update said playlists
  //kill queue command: will kill the entire queue or specific person's queue
@@ -36,9 +34,11 @@
  //potentially find out why it sometimes doesn't work
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
- function Song() {
-    var url;
-    var name;
+ class Song {
+    constructor(url,name) {
+        this.url = url;
+        this.name = name;
+    }
  }
 
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -87,17 +87,24 @@
     //play command
     if(message.content.startsWith("play:")) {
         if(message.member.voiceChannelID) {
-            //play given link
-            var linkcallback = (link)=>{
-                queue.push(link);
-                message.member.voiceChannel.join()
-                .then(connection =>{
-                    //message.channel.send("OwO has arrived");
-                    connectionGlobal = connection
-                    Play(connectionGlobal);
-                }).catch(console.log); 
-            };
             
+            //play given link
+            var linkcallback = (link) => {
+                //console.log('hey yo');
+                getUTubeTitle(link,(title) => {
+                    //console.log('hereyo');
+                    var song = new Song(link,title)
+                    queue.push(song);
+
+                    message.member.voiceChannel.join()
+                    .then(connection =>{
+                        //message.channel.send("OwO has arrived");
+                        connectionGlobal = connection
+                        Play(connectionGlobal,message.guild);
+                    }).catch(console.log); 
+                });
+            };
+            //if link requested
             if(message.content.substring(message.content.indexOf(":")+1).includes(YOUTUBE_URL_VIDEO)){
                 var link = message.content.substring(message.content.indexOf(":")+1);
                 linkcallback(link);
@@ -114,7 +121,7 @@
     if(message.content == "skip"){
         if(connectionGlobal.dispatcher){
             connectionGlobal.dispatcher.end();
-            Play(connectionGlobal);
+            Play(connectionGlobal,message.guild);
         }
     }
     
@@ -153,6 +160,23 @@
         updateVol();
     }
 
+    if(message.content == "info")
+        if(queue[0])
+            message.channel.send(queue[0].url);
+        else
+            message.channel.send("There is nothing playing >//<");
+        
+    if(message.content == "list"){
+        if(queue[0]) {
+            let list = "";
+            for(let i = 0; i < queue.length; i++)
+               list += i + ": " + queue[i].name + "\n";
+            message.channel.send(list);
+        }
+        else
+            message.channel.send("There is nothing playing >//<");
+    }
+
     //search command
     if(message.content.startsWith("search") && message.content.includes(':')){
         var search = message.content.substring(message.content.indexOf(":")+1);
@@ -184,25 +208,27 @@
 
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
- function Play(connection) {
+ function Play(connection,guild) {
     if(!playing && queue[0]) {
         playing = true;
-        last_played = queue[0];
-        let stream = ytdl(queue.shift(),{filter: "audioonly"})
+        guild.me.setNickname(queue[0].name.substring(0,32));
+        //console.log(queue[0]);
+        let stream = ytdl(queue[0].url,{filter: "audioonly"})
         connection.playStream(stream);
         updateVol();
         connection.dispatcher.on('end',() => {
             playing = false;
+            queue.shift();
             if(queue[0])
-                Play(connection);
+                Play(connection,guild);
             else {
                 connection.disconnect();
                 bot.user.setActivity("");
+                guild.me.setNickname("");
             }
         });
     } 
 }
-
 
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -213,13 +239,10 @@
  function getUTubeURL(search,numURLs,callback){
 
     var address = new Array(numURLs)
-    var title = new Array(numURLs) 
-    //address[0] = "";
 
     while(search.includes(" ")) //Replaces all of the spaces in the search request with '+'
         search = search.substring(0,search.indexOf(" "))+"+"+search.substring(search.indexOf(" ")+1);
 
-    var rp = require('request-promise');
     rp(YOUTUBE_URL_SEARCH+search)
         .then( function(htmlString) {
             //console.log(htmlString)
@@ -230,9 +253,6 @@
                     htmlString = htmlString.substring(200);
                     htmlString = htmlString.substring(htmlString.indexOf(HTML_URL_INDEX));
                     address[x] = htmlString.substring(htmlString.indexOf("id=")+4, htmlString.indexOf("\" ",htmlString.indexOf("id=")));
-                    
-                    htmlString = htmlString.substring(htmlString.indexOf(HTML_NAME_INDEX));
-                    title[x] = htmlString.substring(htmlString.indexOf("title=")+7, htmlString.indexOf("\" ",htmlString.indexOf("title=")));
                     x++;
                 }
                 else{
@@ -251,10 +271,47 @@
             callback(urlString)
         })
         .catch(function (err) {
-            console.log("there was an oopsies");
+            console.log("there was an colossal url oopsies");
         });
  }
 
+ ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ function getUTubeTitle(link,callback) {
+    //console.log('!'+link);
+    rp(link)
+        .then( function(htmlString) {
+            htmlString = htmlString.substring(htmlString.indexOf('<title>')+7,htmlString.indexOf(" - YouTube</title>",htmlString.indexOf("<title>")));
+            //console.log(htmlString);
+            // & conversion
+            while(htmlString.indexOf('&amp;') >= 0) //-1 if not found
+                htmlString = htmlString.replace('&amp;','&');   // &amp = &
+
+            // " conversion
+            while(htmlString.indexOf('&quot;') >= 0)
+                htmlString = htmlString.replace('&quot;',"\"");
+
+            // ' conversion
+            while(htmlString.indexOf('&#39;') >= 0) 
+                htmlString = htmlString.replace('&#39;',"\'");  // &#39 = '
+
+            // \ conversion
+            while(htmlString.indexOf('\\') >= 0) 
+                htmlString = htmlString.replace('\\',"~bksh~");   // \ = \\
+            while(htmlString.indexOf('~bksh~') >= 0)
+                htmlString = htmlString.replace('~bksh~','\\\\') 
+            
+            // * conversion
+            while(htmlString.indexOf('*') >= 0 && htmlString.indexOf) 
+                htmlString = htmlString.replace('*',"~star~");   // * = \*
+            while(htmlString.indexOf('~star~') >= 0)
+                htmlString = htmlString.replace('~star~','\\*');
+
+            callback(htmlString);
+        }) .catch(function (err) {
+            console.log("there was a slight naming oopsies");
+            console.log(err);
+        });
+ }
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
  function updateVol(){
