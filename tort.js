@@ -26,6 +26,7 @@
 
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  //POTENTIAL ADD-ONS
+ //cant play mature content
  //rotating queue: will play one song from someone, then the next is from someone else
  //playlists: probably files with links in them and potentially a way to update said playlists
  //kill queue command: will kill the entire queue or specific person's queue
@@ -70,29 +71,31 @@
 
  function musicCommand(message) {
     //help command
-    if(message.content == "help") {
+    var msg = message.content.toLowerCase(); //removes case sensitivity
+    if(msg == "help") {
         message.channel.send("```help == displays list of commands\n\n"
                 + "search:Search_Request == returns the top result of the search request from YouTube\n\n"
                 + "search#:Search_Request == returns top results of search request from YouTube [1 < # < "+MAX_VIDS+"]\n\n"
-                + "play:Search_Request == will find the first YouTube result and play that in the music voice channel\n\n"
-                + "play:YouTube_URL == will play the YouTube video in the music voice channel\n\n"
+                + "play Search_Request == will find the first YouTube result and play that in the music voice channel\n\n"
+                + "play YouTube_URL == will play the YouTube video in the music voice channel\n\n"
                 + "play == unpauses the stream if paused\n\n"
                 + "pause == pauses the stream if playing\n\n"
                 + "skip == skips the current song in queue\n\n"
                 + "vol:# == sets the volume of the number inputed. [0 < # < "+MAX_VOL+"]\n\n"
                 + "volreset == resests the volume to the initial volume:"+INIT_VOL+"\n\n"
-                + "volmax == sets the volume to the maximum:"+MAX_VOL+"\n\n```");
+                + "volmax == sets the volume to the maximum:"+MAX_VOL+"\n\n"
+                + "info == returns url of song playing"
+                + "ls || list == displays the names of the songs on the queue"
+                + "try again == restats the stream (use when bot just for some odd reason wont play"
+                + "kill queue == kills the queue(includes current song playing)"
+                + "```");
     }
 
     //play command
-    if(message.content.startsWith("play:")) {
-        if(message.member.voiceChannelID) {
-            
-            //play given link
+    if(msg.startsWith("play ")) {
+        if(message.member.voiceChannelID) { //if in a voice channel
             var linkcallback = (link) => {
-                //console.log('hey yo');
                 getUTubeTitle(link,(title) => {
-                    //console.log('hereyo');
                     var song = new Song(link,title)
                     queue.push(song);
 
@@ -104,43 +107,48 @@
                     }).catch(console.log); 
                 });
             };
+
             //if link requested
-            if(message.content.substring(message.content.indexOf(":")+1).includes(YOUTUBE_URL_VIDEO)){
-                var link = message.content.substring(message.content.indexOf(":")+1);
+            if(msg.substring(msg.indexOf(" ")+1).includes(YOUTUBE_URL_VIDEO)){
+                var link = msg.substring(msg.indexOf(" ")+1);
                 linkcallback(link);
             }
-
             else
-                getUTubeURL(message.content.substring(message.content.indexOf(":")+1), 1, linkcallback);
+                getUTubeURL(msg.substring(msg.indexOf(" ")+1), 1, linkcallback);
         }
         else {
             message.channel.send("Get in a voice channel and try again.");
         }
     }
 
-    if(message.content == "skip"){
+    //skips song playing
+    if(msg == "skip"){
         if(connectionGlobal.dispatcher){
             connectionGlobal.dispatcher.end();
             Play(connectionGlobal,message.guild);
         }
     }
     
-    if(message.content == "pause"){
+    //pauses stream
+    if(msg == "pause"){
         if(connectionGlobal.dispatcher.paused)
             message.channel.send("It's already paused. >//<");
         else
             connectionGlobal.dispatcher.pause();
     }
 
-    if(message.content == "play"){
-        if(!connectionGlobal.dispatcher.paused)
-            message.channel.send("It's already playing. >//<");
-        else
-            connectionGlobal.dispatcher.resume();
+    //resusmes stream
+    if(msg == "play"){
+        if(connectionGlobal)
+            if(!connectionGlobal.dispatcher.paused)
+                message.channel.send("It's already playing. >//<");
+            else
+                connectionGlobal.dispatcher.resume();
     }
 
-    if(message.content.startsWith("vol:")){
-        var vol = message.content.substring(4);
+    //sets volume to requested number with bounds of 0 and MAX_VOL
+    if(msg.startsWith("vol:")){
+        var vol = msg.substring(4);
         if(vol>=0 && vol<=MAX_VOL) {
             volume = vol;
             updateVol();
@@ -150,23 +158,26 @@
     }
 
     //resets volume to Initial volume level
-    if(message.content == "volreset"){
+    if(msg == "volreset"){
         volume = INIT_VOL;
         updateVol();
     }
 
-    if(message.content == "volmax"){
+    //sets volume to max
+    if(msg == "volmax" || msg == "crank it"){
         volume = MAX_VOL;
         updateVol();
     }
 
-    if(message.content == "info")
+    //sends url of playing song to channel
+    if(msg == "info")
         if(queue[0])
             message.channel.send(queue[0].url);
         else
             message.channel.send("There is nothing playing >//<");
-        
-    if(message.content == "list"){
+    
+    //displays the queue
+    if(msg == "ls" || msg == "list"){
         if(queue[0]) {
             let list = "";
             for(let i = 0; i < queue.length; i++)
@@ -177,18 +188,42 @@
             message.channel.send("There is nothing playing >//<");
     }
 
+    //disconnects from the stream, kills the queue, and then restarts stream with the original queue
+    //this is meant for when the stream fails to play the song
+    if(msg == "try again"){
+        var tempQ = [];
+        for(let i = 0; i < queue.length; i++)
+            tempQ[i] = new Song(queue[i].url,queue[i].name);
+        
+        queue = [];
+        connectionGlobal.dispatcher.end();
+        message.member.voiceChannel.join()
+            .then(connection => {
+                for(let i = 0; i < tempQ.length; i++)
+                    queue[i] = new Song(tempQ[i].url,tempQ[i].name);
+                connectionGlobal = connection;
+                Play(connectionGlobal,message.guild);
+            }).catch(console.log);
+    }
+
+    //kills the queue
+    if(msg == "kill queue") {
+        queue = [];
+        connectionGlobal.dispatcher.end();
+    }
+
     //search command
-    if(message.content.startsWith("search") && message.content.includes(':')){
-        var search = message.content.substring(message.content.indexOf(":")+1);
+    if(msg.startsWith("search") && msg.includes(':')){
+        var search = msg.substring(msg.indexOf(":")+1);
         let numURLs = 1;
-        let vidRequest = message.content.substring(6,message.content.indexOf(":"));
+        let vidRequest = msg.substring(6,msg.indexOf(":"));
         while(vidRequest.includes(' ')) //removes whitespace from request
             vidRequest = vidRequest.replace(' ',"");
         //processing search request for number of videos
         if(vidRequest != ""){
             if(parseInt(vidRequest) != NaN)
                 if(parseInt(vidRequest)<1) {
-                    message.channel.send("The number of searchs mush be greater than 0.  The search has been set to 1")
+                    message.channel.send("The number of searchs mush be greater than 0.  The search has been set to 1");
                 }
                 else if(parseInt(vidRequest)>MAX_VIDS) {
                     message.channel.send("The number of searchs cannot exceed "+MAX_VIDS+".  The search has been reduced to the max of "+MAX_VIDS+".");
