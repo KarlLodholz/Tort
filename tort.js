@@ -206,7 +206,9 @@
     //kills the queue
     if(msg == "kill queue") {
         queue = [];
-        connectionGlobal.dispatcher.end();
+        if(connectionGlobal)
+            if(connectionGlobal.dispatcher)
+                connectionGlobal.dispatcher.end();
     }
 
     //search command
