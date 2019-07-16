@@ -25,14 +25,12 @@
  var rp = require('request-promise');
 
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
- //POTENTIAL ADD-ONS
+ //POTENTIAL ADD-ONS and problems
  //cant play mature content
+ //cant play streams/live videos
  //rotating queue: will play one song from someone, then the next is from someone else
  //playlists: probably files with links in them and potentially a way to update said playlists
- //kill queue command: will kill the entire queue or specific person's queue
  //option to normal queueing or rotating queueing
- //add display queue command
- //potentially find out why it sometimes doesn't work
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
  class Song {
@@ -84,11 +82,10 @@
                 + "vol:# == sets the volume of the number inputed. [0 < # < "+MAX_VOL+"]\n\n"
                 + "volreset == resests the volume to the initial volume:"+INIT_VOL+"\n\n"
                 + "volmax == sets the volume to the maximum:"+MAX_VOL+"\n\n"
-                + "info == returns url of song playing"
-                + "ls || list == displays the names of the songs on the queue"
-                + "try again == restats the stream (use when bot just for some odd reason wont play"
-                + "kill queue == kills the queue(includes current song playing)"
-                + "```");
+                + "info == returns url of song playing\n\n"
+                + "ls || list == displays the names of the songs on the queue\n\n"
+                + "try again == restats the stream (use when bot just for some odd reason wont play)\n\n"
+                + "kill queue == kills the queue(includes current song playing)\n\n```");
     }
 
     //play command
@@ -247,7 +244,6 @@
     if(!playing && queue[0]) {
         playing = true;
         guild.me.setNickname(queue[0].name.substring(0,32));
-        //console.log(queue[0]);
         let stream = ytdl(queue[0].url,{filter: "audioonly"})
         connection.playStream(stream);
         updateVol();
