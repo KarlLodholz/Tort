@@ -72,6 +72,8 @@
  function musicCommand(message) {
     //help command
     var msg = message.content.toLowerCase(); //removes case sensitivity
+    var command = message.content.toLowerCase().split(" "); //array of the commands split where spaces are present.
+
     if(msg == "help") {
         message.channel.send("```help == displays list of commands\n\n"
                 + "search:Search_Request == returns the top result of the search request from YouTube\n\n"
@@ -88,6 +90,8 @@
                 + "try again == restats the stream (use when bot just for some odd reason wont play)\n\n"
                 + "kill queue == kills the queue(includes current song playing)\n\n"
                 + "playlists == displays the playlists available\n\n"
+                //+ "touch Playlist_Name == makes a new playlist\n\n"
+                //+ "rm Playlist_Name == deletes the playlist (can only be done by creater of the playlist)\n\n"
                 //+ "add Playlist_Name Search_Request/YouTube_URL == will add the search request to the playlist after asking for a confirmation on the search result.\n\n"
                 //+ "delete Playlist_Name Key_Word/Phrase == will remove all songs with Key_Word/Phrase upon confirmation.\n\n"
                 + "```");
@@ -252,30 +256,47 @@
                 pylsStr += file.substring(0,file.indexOf('.'));
             });
             if(pylsStr == "Playlists:\n")
-                pylsStr = "Im sorry, no playlists are available.  Please create a new playlist with the command `new playlist Playlist_Name`"; 
+                pylsStr = "Im sorry, no playlists are available.  Please create a new playlist with the command `touch Playlist_Name`"; 
             message.channel.send(pylsStr);
         });
     }
 
-    if(msg.startsWith("add ") || msg.startsWith("delete ")) {
-        let found = false;
-        let pyls = msg.substring(msg.indexOf(' ')+1);
+    //creating playlists
+    if(command[0] == "touch") {
 
-        pyls = pyls.substring(0,pyls.indexOf(' '));
-        if(pyls) { //will be false if no space is after the first space
+    }
+
+    //deleting playlists
+    if(command[0] == "rm") {
+
+    }
+
+    //editing playlists
+    if(command[0] == ("add") || command[0] == ("delete")) {
+        let found = false;
+        //let command = msg.split(" "); //array of the commands split where spaces are present.
+        if(command[1]) {
             fs.readdir(PLAYLS_DIR, (err, files) => { 
                 files.forEach(file => {
-                    if(pyls + ".txt" == file)
+                    if(command[1] + ".txt" == file) 
                         found = true;  
                 });
                 if(found)
-                    fs.readFile(PLAYLS_DIR+pyls+".txt", function(err, data) {
-                        if(err) throw err;
-                        //console.log(data.toString());
-                        //request = msg.substring(msg.indexOf(pyls)+pyls)
+                    fs.readFile(PLAYLS_DIR+command[1]+".txt", function(err, data) {
+                        if(err) {
+                            console.log(err);
+                            throw err;
+                        }
+                        if(command[0] == "add") { //adding songs to playlists
+
+                        } 
+                        else if(command[0] == "delete") { //removing songs from playlist
+                            
+                        }
+
                     })
                 else
-                    message.channel.send("Im sorry, but the playlist: "+pyls+" could not be found.  Please try the command `playlists` to see available playlists.");
+                    message.channel.send("Im sorry, but the playlist: "+command[1]+" could not be found.  Please try the command `playlists` to see available playlists.");
             });
         }
         else
