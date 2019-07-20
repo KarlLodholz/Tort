@@ -10,14 +10,14 @@
  const OWNER_ID = '192461753542639617';
  const OWNER_ID2 = '323218204014936069';
  const MAX_VIDS = 5;
- const MAX_VOL = 100; //vol can go as high or low as desired, however anything will distort the sound.  1000 sounds extremely distorted
+ const MAX_VOL = 100; //vol can go as high or low as desired, however anything other than 100 will distort the sound.  1000 sounds extremely distorted
  const INIT_VOL = 25;
  const YOUTUBE_URL_VIDEO = "https://www.youtube.com/watch?v=";
  const YOUTUBE_URL_SEARCH = "https://www.youtube.com/results?search_query=";
  const TEST_CHANNEL_ID = 428015548325036032;
  const MUSIC_CHANNEL_ID = 598554308585455629;
  const HTML_URL_INDEX = "<li><div class=\"yt-lockup yt-lockup-tile yt-lockup-video vve-check clearfix\" data-context-item-id=\""
- const PLAYLS_DIR = "./playlists/";
+ const PYLS_DIR = "./playlists/";
  var volume = INIT_VOL;
  var queue = [];
  var playing = false;
@@ -52,17 +52,17 @@
     }
     
     //kill command: kill + @bot  //done this way to shut down multiple bots with one command.
-    if(message.author.id == OWNER_ID || message.author.id == OWNER_ID2){
-        if(message.content.startsWith('kill') && message.content.includes('@'+BOT_ID)){
+    if(message.author.id == OWNER_ID || message.author.id == OWNER_ID2) {
+        if(message.content.startsWith('kill') && message.content.includes('@'+BOT_ID)) {
             message.channel.send("Terminating Program Tort\nGoodbye OwO");
-            setTimeout(function(){
+            setTimeout(function() {
                 process.exit(1);
             }, 85);
         }
     }
 
     //music commands
-    if(message.channel.id == MUSIC_CHANNEL_ID || message.channel.id == TEST_CHANNEL_ID ){
+    if(message.channel.id == MUSIC_CHANNEL_ID || message.channel.id == TEST_CHANNEL_ID ) {
         musicCommand(message);
     }
  })
@@ -72,17 +72,18 @@
  function musicCommand(message) {
     //help command
     var msg = message.content.toLowerCase(); //removes case sensitivity
-    var command = message.content.toLowerCase().split(" "); //array of the commands split where spaces are present.
+    var command = message.content.split(" "); //array of the commands split where spaces are present.
 
     if(msg == "help") {
-        message.channel.send("```help == displays list of commands\n\n"
-                + "search:Search_Request == returns the top result of the search request from YouTube\n\n"
-                + "search#:Search_Request == returns top results of search request from YouTube [1 < # < "+MAX_VIDS+"]\n\n"
+        message.channel.send("```"
+                + "help == displays list of commands\n\n"
+                + "search Search_Request == returns the top result of the search request from YouTube\n\n"
+                + "search# Search_Request == returns top results of search request from YouTube [1 < # < "+MAX_VIDS+"]\n\n"
                 + "play Search_Request/YouTube_URL == adds the first seach result or url to the queue and begins queue if not already playing\n\n"
+                + "skip == skips the current song in queue\n\n"
                 + "play == unpauses the stream if paused\n\n"
                 + "pause == pauses the stream if playing\n\n"
-                + "skip == skips the current song in queue\n\n"
-                + "vol:# == sets the volume of the number inputed. [0 < # < "+MAX_VOL+"]\n\n"
+                + "vol # == sets the volume of the number inputed. [0 < # < "+MAX_VOL+"]\n\n"
                 + "volreset == resests the volume to the initial volume:"+INIT_VOL+"\n\n"
                 + "volmax == sets the volume to the maximum:"+MAX_VOL+"\n\n"
                 + "info == returns url of song playing\n\n"
@@ -90,23 +91,49 @@
                 + "try again == restats the stream (use when bot just for some odd reason wont play)\n\n"
                 + "kill queue == kills the queue(includes current song playing)\n\n"
                 + "playlists == displays the playlists available\n\n"
-                //+ "touch Playlist_Name == makes a new playlist\n\n"
-                //+ "rm Playlist_Name == deletes the playlist (can only be done by creater of the playlist)\n\n"
-                //+ "add Playlist_Name Search_Request/YouTube_URL == will add the search request to the playlist after asking for a confirmation on the search result.\n\n"
-                //+ "delete Playlist_Name Key_Word/Phrase == will remove all songs with Key_Word/Phrase upon confirmation.\n\n"
+                + "touch Playlist_Name == makes a new playlist\n\n"
+                + "rm Playlist_Name == deletes the playlist (can only be done by creator of the playlist)\n\n"
+                + "add Playlist_Name Search_Request/YouTube_URL == will add the search request to the playlist\n\n"
+                + "delete Playlist_Name Key_Words/Youtube_URL == will remove all songs with Key_Words/url\n\n"
                 + "```");
     }
 
+    //search command
+    if(command[0].toLowerCase().includes("search")) {
+        var search = msg.substring(msg.indexOf(" ")+1);
+        let numURLs = 1;
+        let vidRequest = msg.substring(6,msg.indexOf(" "));
+        //processing search request for number of videos
+        if(vidRequest != "") {
+            if(parseInt(vidRequest) != NaN)
+                if(parseInt(vidRequest)<1) {
+                    message.channel.send("The number of searchs mush be greater than 0.  The search has been set to 1");
+                }
+                else if(parseInt(vidRequest)>MAX_VIDS) {
+                    message.channel.send("The number of searchs cannot exceed "+MAX_VIDS+".  The search has been reduced to the max of "+MAX_VIDS+".");
+                    numURLs = MAX_VIDS;
+                }
+                else
+                    numURLs = parseInt(vidRequest);
+            else
+                message.channel.send("Invalid search request.  The search has been set to 1.");
+        }
+        var urlString = "";
+        getYouTubeURL(search,numURLs,(urlString)=> {
+            message.channel.send(urlString);
+        });
+    }
+
     //play command
-    if(msg.startsWith("play ")) {
+    if(command[0].toLowerCase() == "play" && command[1]) {
         if(message.member.voiceChannelID) { //if in a voice channel
             var linkcallback = (link) => {
-                getUTubeTitle(link,(title) => {
+                getYouTubeTitle(link,(title) => {
                     var song = new Song(link,title)
                     queue.push(song);
 
                     message.member.voiceChannel.join()
-                    .then(connection =>{
+                    .then(connection => {
                         //message.channel.send("OwO has arrived");
                         connectionGlobal = connection
                         Play(connectionGlobal,message.guild);
@@ -114,13 +141,10 @@
                 });
             };
 
-            //if link requested
-            if(msg.substring(msg.indexOf(" ")+1).includes(YOUTUBE_URL_VIDEO)){
-                var link = msg.substring(msg.indexOf(" ")+1);
-                linkcallback(link);
-            }
-            else
-                getUTubeURL(msg.substring(msg.indexOf(" ")+1), 1, linkcallback);
+            if(command[1].includes(YOUTUBE_URL_VIDEO))      //if link requested
+                linkcallback(command[1]);
+            else                                            //if search requested
+                getYouTubeURL(msg.substring(msg.indexOf(" ")+1), 1, linkcallback);
         }
         else {
             message.channel.send("Get in a voice channel and try again.");
@@ -128,51 +152,55 @@
     }
 
     //skips song playing
-    if(msg == "skip"){
-        if(connectionGlobal.dispatcher){
+    if(msg == "skip") {
+        if(connectionGlobal.dispatcher) {
             connectionGlobal.dispatcher.end();
             Play(connectionGlobal,message.guild);
         }
     }
     
-    //pauses stream
-    if(msg == "pause"){
-        if(connectionGlobal.dispatcher.paused)
-            message.channel.send("It's already paused. >//<");
-        else
-            connectionGlobal.dispatcher.pause();
-    }
-
     //resusmes stream
-    if(msg == "play"){
-        if(connectionGlobal)
+    if(msg == "play") {
+        if(connectionGlobal && connectionGlobal.dispatcher)
             if(!connectionGlobal.dispatcher.paused)
                 message.channel.send("It's already playing. >//<");
             else
                 connectionGlobal.dispatcher.resume();
+        else
+            message.channel.send("Something must be playing for me to play it");
+    }
+
+    //pauses stream
+    if(msg == "pause") {
+        if(connectionGlobal && connectionGlobal.dispatcher)
+            if(connectionGlobal.dispatcher.paused)
+                message.channel.send("It's already paused. >//<");
+            else
+                connectionGlobal.dispatcher.pause();
+        else
+            message.channel.send("Something must be playing for me to pause it"); 
     }
 
     //sets volume to requested number with bounds of 0 and MAX_VOL
-    if(msg.startsWith("vol:")){
-        var vol = msg.substring(4);
-        if(vol>=0 && vol<=MAX_VOL) {
-            volume = vol;
-            updateVol();
+    if(command[0].toLowerCase() == "vol") {
+        if(command[1] >= 0 && command[1] <= MAX_VOL) {
+            volume = command[1];
+            updateVol(connectionGlobal);
         }
         else    
             message.channel.send("Pick a valid number (0-"+MAX_VOL+")");
     }
 
     //resets volume to Initial volume level
-    if(msg == "volreset"){
+    if(msg == "volreset") {
         volume = INIT_VOL;
-        updateVol();
+        updateVol(connectionGlobal);
     }
 
     //sets volume to max
-    if(msg == "volmax" || msg == "crank it"){
+    if(msg == "volmax" || msg == "crank it") {
         volume = MAX_VOL;
-        updateVol();
+        updateVol(connectionGlobal);
     }
 
     //sends url of playing song to channel
@@ -183,7 +211,7 @@
             message.channel.send("There is nothing playing >//<");
     
     //displays the queue
-    if(msg == "ls" || msg == "list"){
+    if(msg == "ls" || msg == "list") {
         if(queue[0]) {
             let list = "";
             for(let i = 0; i < queue.length; i++)
@@ -196,7 +224,7 @@
 
     //disconnects from the stream, kills the queue, and then restarts stream with the original queue
     //this is meant for when the stream fails to play the song
-    if(msg == "try again"){
+    if(msg == "try again") {
         var tempQ = [];
         for(let i = 0; i < queue.length; i++)
             tempQ[i] = new Song(queue[i].url,queue[i].name);
@@ -220,38 +248,10 @@
                 connectionGlobal.dispatcher.end();
     }
 
-    //search command
-    if(msg.startsWith("search") && msg.includes(':')){
-        var search = msg.substring(msg.indexOf(":")+1);
-        let numURLs = 1;
-        let vidRequest = msg.substring(6,msg.indexOf(":"));
-        while(vidRequest.includes(' ')) //removes whitespace from request
-            vidRequest = vidRequest.replace(' ',"");
-        //processing search request for number of videos
-        if(vidRequest != ""){
-            if(parseInt(vidRequest) != NaN)
-                if(parseInt(vidRequest)<1) {
-                    message.channel.send("The number of searchs mush be greater than 0.  The search has been set to 1");
-                }
-                else if(parseInt(vidRequest)>MAX_VIDS) {
-                    message.channel.send("The number of searchs cannot exceed "+MAX_VIDS+".  The search has been reduced to the max of "+MAX_VIDS+".");
-                    numURLs = MAX_VIDS;
-                }
-                else
-                    numURLs = parseInt(vidRequest);
-            else
-                message.channel.send("Invalid search request.  The search has been set to 1.");
-        }
-        var urlString = "";
-        getUTubeURL(search,numURLs,(urlString)=> {
-            message.channel.send(urlString);
-        });
-    }
-
     //displays the playlists available
     if(msg == "playlists") { 
         let pylsStr = "Playlists:\n";
-        fs.readdir(PLAYLS_DIR, (err, files) => { 
+        fs.readdir(PYLS_DIR, (err, files) => { 
             files.forEach(file => {
                 pylsStr += file.substring(0,file.indexOf('.'));
             });
@@ -262,41 +262,117 @@
     }
 
     //creating playlists
-    if(command[0] == "touch") {
-
+    if(command[0].toLowerCase() == "touch") {
+        fs.readdir(PYLS_DIR, (err, files) => { 
+            var found = false;
+            files.forEach(file => {
+                if(command[1].toLowerCase() + ".txt" == file) 
+                    found = true;  
+            });
+            if(found)
+                message.channel.send("There is already a playlist named: "+command[1].toLowerCase());
+            else {
+                fs.writeFile(PYLS_DIR+command[1].toLowerCase()+".txt",message.author.id+"\n",(err) => {
+                    if(err) throw err;
+                })
+            }
+        });
     }
 
     //deleting playlists
-    if(command[0] == "rm") {
-
+    if(command[0].toLowerCase() == "rm") {
+        fs.readdir(PYLS_DIR, (err, files) => { 
+            var found = false;
+            files.forEach(file => {
+                if(command[1].toLowerCase() + ".txt" == file) 
+                    found = true;  
+            });
+            if(!found)
+                message.channel.send("There is no playlist named: "+command[1].toLowerCase());
+            else {
+                fs.readFile(PYLS_DIR+command[1].toLowerCase()+".txt", function(err, data) {
+                    let ownerID = data.toString().substring(0,data.toString().indexOf("\n"))
+                    if(ownerID == message.author.id || ownerID == OWNER_ID || ownerID == OWNER_ID2)  //checks if the person deleting is the creator of the playlist or the admin
+                        fs.unlink(PYLS_DIR+command[1].toLowerCase()+".txt",(err) => {
+                            if(err) throw err;
+                    });
+                });
+            }
+        });
     }
 
     //editing playlists
-    if(command[0] == ("add") || command[0] == ("delete")) {
+    if(command[0].toLowerCase() == "add" || command[0].toLowerCase() == "delete") {
         let found = false;
         //let command = msg.split(" "); //array of the commands split where spaces are present.
         if(command[1]) {
-            fs.readdir(PLAYLS_DIR, (err, files) => { 
+            fs.readdir(PYLS_DIR, (err, files) => { 
                 files.forEach(file => {
-                    if(command[1] + ".txt" == file) 
+                    if(command[1].toLowerCase() + ".txt" == file) 
                         found = true;  
                 });
                 if(found)
-                    fs.readFile(PLAYLS_DIR+command[1]+".txt", function(err, data) {
+                    fs.readFile(PYLS_DIR+command[1].toLowerCase()+".txt", function(err, data) {
                         if(err) {
                             console.log(err);
                             throw err;
                         }
-                        if(command[0] == "add") { //adding songs to playlists
-
-                        } 
-                        else if(command[0] == "delete") { //removing songs from playlist
-                            
+                        if(command[2]) {
+                            var search = "";
+                            for(let i = 2; i < command.length; i++)
+                                search += command[i]+ (i+1 == command.length?"":" ");
+                            if(command[0].toLowerCase() == "add") {             //adding songs to playlists
+                                var linkcallback = (link) => {
+                                    getYouTubeTitle(link,(title) => {
+                                        if(!data.toString().includes(link)) {
+                                            fs.appendFile(PYLS_DIR+command[1].toLowerCase()+".txt", title+";"+link, (err) => {
+                                                if(err) throw err;
+                                                message.channel.send(link + "has been added to the playlist: " + command[1].toLowerCase());
+                                            });
+                                        }
+                                        else
+                                            message.channel.send("that link is already on the playlist: " + command[1].toLowerCase());
+                                    });
+                                }
+                                if(search.includes(YOUTUBE_URL_VIDEO))      //links
+                                   linkcallback(search);
+                                else                                        //search request
+                                    getYouTubeURL(search, 1, linkcallback);
+                            }
+                            else if(command[0].toLowerCase() == "delete") {     //removing songs from playlist
+                                let songs = data.toString().substring(data.toString().indexOf("\n")).split("\n");
+                                let list = "";
+                                let listRM = "";
+                                if(command[2].includes(YOUTUBE_URL_VIDEO)) {    //links
+                                    songs.forEach(song => {
+                                        if(song.substring(song.indexOf(';')) == command[2])
+                                            listRM += song;
+                                        else
+                                            list += song;
+                                    });
+                                }
+                                else {                                      //keywords
+                                    songs.forEach(song => {
+                                        if(!song.substring(0,song.indexOf(';')).toLowerCase().includes(search.toLowerCase()))
+                                            list += song+"\n";
+                                        else
+                                            listRM += song.substring(song.indexOf(';')+1)+"\n";
+                                    });
+                                }
+                                fs.writeFile(PYLS_DIR+command[1].toLowerCase()+".txt",data.toString().substring(0,data.toString().indexOf("\n"))+list,(err) => {
+                                        if(err) throw err;
+                                        if(listRM)
+                                            message.channel.send("the song(s) deleted are as follows:\n"+listRM);
+                                        else
+                                            message.channel.send("no songs were found from request: "+command[2]);
+                                });
+                            }
                         }
-
+                        else
+                            message.channel.send("Invallid command. See `help` for information on the commands")
                     })
                 else
-                    message.channel.send("Im sorry, but the playlist: "+command[1]+" could not be found.  Please try the command `playlists` to see available playlists.");
+                    message.channel.send("Im sorry, but the playlist: "+command[1].toLowerCase()+" could not be found.  Please try the command `playlists` to see available playlists.");
             });
         }
         else
@@ -312,7 +388,7 @@
         guild.me.setNickname(queue[0].name.substring(0,32));
         let stream = ytdl(queue[0].url,{filter: "audioonly"})
         connection.playStream(stream);
-        updateVol();
+        updateVol(connection);
         connection.dispatcher.on('end',() => {
             playing = false;
             queue.shift();
@@ -333,7 +409,7 @@
  //urls will be returned in address with the first youtube vid url
  //urls do not include ads or playlists
  //recommended that address not be initalized with a size more than 15 because the search is at max 20 urls, but ads and playlists will be skipped
- function getUTubeURL(search,numURLs,callback){
+ function getYouTubeURL(search,numURLs,callback) {
 
     var address = new Array(numURLs)
 
@@ -345,14 +421,14 @@
             //console.log(htmlString)
             var end = false;
             let x = 0;
-            while((!end)&&(x<numURLs)){
-                if(htmlString.indexOf(HTML_URL_INDEX)!=-1){ //-1 if not found
+            while((!end)&&(x<numURLs)) {
+                if(htmlString.indexOf(HTML_URL_INDEX)!=-1) { //-1 if not found
                     htmlString = htmlString.substring(200);
                     htmlString = htmlString.substring(htmlString.indexOf(HTML_URL_INDEX));
                     address[x] = htmlString.substring(htmlString.indexOf("id=")+4, htmlString.indexOf("\" ",htmlString.indexOf("id=")));
                     x++;
                 }
-                else{
+                else {
                     end = true;
                     console.log("ERROR: To many urls requested or invalid search");
                     console.log(x+" urls have been returned");
@@ -373,7 +449,7 @@
  }
 
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
- function getUTubeTitle(link,callback) {
+ function getYouTubeTitle(link,callback) {
     //console.log('!'+link);
     rp(link)
         .then( function(htmlString) {
@@ -411,10 +487,13 @@
  }
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
- function updateVol(){
-    connectionGlobal.dispatcher.setVolume(volume/100);
-    bot.user.setActivity("vol:"+volume);
+ function updateVol(connection) {
+    if(connection && connection.dispatcher) { //will not update the volume if the connection and or dispatcher are undefined
+        connection.dispatcher.setVolume(volume/100);
+        bot.user.setActivity("vol:"+volume);
+    }
     return;
  }
 
+ ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 bot.login(TOKEN);
