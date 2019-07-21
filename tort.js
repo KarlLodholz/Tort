@@ -297,11 +297,14 @@
             else {
                 fs.readFile(PYLS_DIR+command[1].toLowerCase()+".txt", function(err, data) {
                     let ownerID = data.toString().substring(0,data.toString().indexOf("\n"))
-                    if(ownerID == message.author.id || ownerID == OWNER_ID || ownerID == OWNER_ID2)  //checks if the person deleting is the creator of the playlist or the admin
+                    if(ownerID == message.author.id || message.author.id == OWNER_ID || message.author.id == OWNER_ID2) {  //checks if the person deleting is the creator of the playlist or the admin
                         fs.unlink(PYLS_DIR+command[1].toLowerCase()+".txt",(err) => {
                             if(err) throw err;
                             message.channel.send("Playlist: "+command[1]+" has been deleted");
                         });
+                    }
+                    else
+                        console.log("You do not have permission to delete this playlist");
                 });
             }
         });
