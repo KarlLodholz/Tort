@@ -95,6 +95,7 @@
                 + "rm Playlist_Name == deletes the playlist (can only be done by creator of the playlist)\n\n"
                 + "add Playlist_Name Search_Request/YouTube_URL == will add the search request to the playlist\n\n"
                 + "delete Playlist_Name Key_Words/Youtube_URL == will remove all songs with Key_Words/url\n\n"
+                + "load Playlist_Name == the playlist will be randomly added to the queue"
                 + "```");
     }
 
