@@ -135,7 +135,7 @@
                     message.member.voiceChannel.join()
                     .then(connection => {
                         //message.channel.send("OwO has arrived");
-                        connectionGlobal = connection
+                        connectionGlobal = connection;
                         Play(connectionGlobal,message.guild);
                     }).catch(console.log); 
                 });
@@ -244,8 +244,10 @@
     if(msg == "kill queue") {
         queue = [];
         if(connectionGlobal)
-            if(connectionGlobal.dispatcher)
+            if(connectionGlobal.dispatcher) {
                 connectionGlobal.dispatcher.end();
+                message.channel.send("Queue has been killed");
+            }
     }
 
     //displays the playlists available
@@ -340,7 +342,7 @@
                                     getYouTubeURL(search, 1, linkcallback);
                             }
                             else if(command[0].toLowerCase() == "delete") {     //removing songs from playlist
-                                let songs = data.toString().substring(data.toString().indexOf("\n")).split("\n");
+                                let songs = data.toString().substring(data.toString().indexOf("\n")+1).split("\n");
                                 let list = "";
                                 let listRM = "";
                                 if(command[2].includes(YOUTUBE_URL_VIDEO)) {    //links
@@ -373,6 +375,37 @@
                     })
                 else
                     message.channel.send("Im sorry, but the playlist: "+command[1].toLowerCase()+" could not be found.  Please try the command `playlists` to see available playlists.");
+            });
+        }
+        else
+            message.channel.send("Invallid command. See `help` for information on the commands");
+    }
+
+    if(command[0].toLowerCase() == "load") {
+        if(command[1]) {
+            fs.readdir(PYLS_DIR, (err, files) => { 
+                let found = false;
+                files.forEach(file => {
+                    if(command[1].toLowerCase()+".txt" == file)
+                        found = true;
+                });
+                if(found){
+                    fs.readFile(PYLS_DIR+command[1].toLowerCase()+".txt", function(err, data) {
+                        let songs = data.toString().substring(data.toString().indexOf("\n")+1).split("\n");
+                        shuffle(songs);
+                        songs.forEach(song => {
+                            var vid = new Song(song.substring(song.indexOf(';')+1),song.substring(0,song.indexOf(';')));
+                            queue.push(vid);
+                        });
+                        message.member.voiceChannel.join()
+                        .then(connection => {
+                            connectionGlobal = connection;
+                            Play(connectionGlobal,message.guild);
+                        }).catch(console.log); 
+                    });
+                }
+                else
+                    message.channel.send("There is no playlist named: "+command[1].toLowerCase());
             });
         }
         else
@@ -496,4 +529,16 @@
  }
 
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-bot.login(TOKEN);
+ 
+ //shuffles the queue of songs
+ function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        let j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return;
+ }
+
+ ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ 
+ bot.login(TOKEN);
