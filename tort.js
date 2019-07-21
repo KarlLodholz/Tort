@@ -87,7 +87,7 @@
                 + "volreset == resests the volume to the initial volume:"+INIT_VOL+"\n\n"
                 + "volmax == sets the volume to the maximum:"+MAX_VOL+"\n\n"
                 + "info == returns url of song playing\n\n"
-                + "ls || list == displays the names of the songs on the queue\n\n"
+                + "ls/list == displays the names of the songs on the queue\n\n"
                 + "try again == restats the stream (use when bot just for some odd reason wont play)\n\n"
                 + "kill queue == kills the queue(includes current song playing)\n\n"
                 + "playlists == displays the playlists available\n\n"
@@ -96,6 +96,7 @@
                 + "add Playlist_Name Search_Request/YouTube_URL == will add the search request to the playlist\n\n"
                 + "delete Playlist_Name Key_Words/Youtube_URL == will remove all songs with Key_Words/url\n\n"
                 + "load Playlist_Name == the playlist will be randomly added to the queue"
+                + "ls/list Playlist_Name == displays all songs from the playlist"
                 + "```");
     }
 
@@ -277,6 +278,7 @@
             else {
                 fs.writeFile(PYLS_DIR+command[1].toLowerCase()+".txt",message.author.id+"\n",(err) => {
                     if(err) throw err;
+                    message.channel.send("Playlist: "+command[1]+" has been created")
                 })
             }
         });
@@ -298,7 +300,8 @@
                     if(ownerID == message.author.id || ownerID == OWNER_ID || ownerID == OWNER_ID2)  //checks if the person deleting is the creator of the playlist or the admin
                         fs.unlink(PYLS_DIR+command[1].toLowerCase()+".txt",(err) => {
                             if(err) throw err;
-                    });
+                            message.channel.send("Playlist: "+command[1]+" has been deleted");
+                        });
                 });
             }
         });
@@ -390,20 +393,25 @@
                     if(command[1].toLowerCase()+".txt" == file)
                         found = true;
                 });
-                if(found){
-                    fs.readFile(PYLS_DIR+command[1].toLowerCase()+".txt", function(err, data) {
-                        let songs = data.toString().substring(data.toString().indexOf("\n")+1).split("\n");
-                        shuffle(songs);
-                        songs.forEach(song => {
-                            var vid = new Song(song.substring(song.indexOf(';')+1),song.substring(0,song.indexOf(';')));
-                            queue.push(vid);
+                if(found) {
+                    if(message.member.voiceChannelID) { //if in a voice channel
+                        fs.readFile(PYLS_DIR+command[1].toLowerCase()+".txt", function(err, data) {
+                            let songs = data.toString().substring(data.toString().indexOf("\n")+1).split("\n");
+                            shuffle(songs);
+                            songs.forEach(song => {
+                                var vid = new Song(song.substring(song.indexOf(';')+1),song.substring(0,song.indexOf(';')));
+                                queue.push(vid);
+                            });
+                            message.member.voiceChannel.join()
+                            .then(connection => {
+                                connectionGlobal = connection;
+                                Play(connectionGlobal,message.guild);
+                            }).catch(console.log); 
                         });
-                        message.member.voiceChannel.join()
-                        .then(connection => {
-                            connectionGlobal = connection;
-                            Play(connectionGlobal,message.guild);
-                        }).catch(console.log); 
-                    });
+                    }
+                    else
+                        message.channel.send("Get in a voice channel and try again.");
+
                 }
                 else
                     message.channel.send("There is no playlist named: "+command[1].toLowerCase());
@@ -411,6 +419,30 @@
         }
         else
             message.channel.send("Invallid command. See `help` for information on the commands");
+    }
+
+    if(command[0].toLowerCase() == "ls" || command[0].toLowerCase() == "list") {
+        if(command[1]) {
+            fs.readdir(PYLS_DIR, (err, files) => { 
+                let found = false;
+                files.forEach(file => {
+                    if(command[1].toLowerCase()+".txt" == file)
+                        found = true;
+                });
+                if(found) {
+                    fs.readFile(PYLS_DIR+command[1].toLowerCase()+".txt", function(err, data){
+                        let songs = data.toString().substring(data.toString().indexOf("\n")+1).split("\n");
+                        let names = "";
+                        songs.forEach(song => {
+                            names += song.substring(0,song.indexOf(';'))+"\n";
+                        });
+                        message.channel.send("Songs:\n"+names);
+                    });
+                }
+                else
+                    message.channel.send("Im sorry, but the playlist: "+command[1].toLowerCase()+" could not be found.  Please try the command `playlists` to see available playlists.");
+            });
+        }
     }
  }
 
