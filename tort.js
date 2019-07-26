@@ -27,18 +27,17 @@
 
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  //POTENTIAL ADD-ONS and problems
- //remove colons from all commands because you know they are annoying
  //cant play mature content
  //cant play streams/live videos
  //rotating queue: will play one song from someone, then the next is from someone else
- //playlists: probably files with links in them and potentially a way to update said playlists
  //option to normal queueing or rotating queueing
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
  class Song {
-    constructor(url,name) {
+    constructor(url,name,dur) {
         this.url = url;
         this.name = name;
+        this.dur = dur
     }
  }
 
@@ -86,7 +85,7 @@
                 + "vol # == sets the volume of the number inputed. [0 < # < "+MAX_VOL+"]\n\n"
                 + "volreset == resests the volume to the initial volume:"+INIT_VOL+"\n\n"
                 + "volmax == sets the volume to the maximum:"+MAX_VOL+"\n\n"
-                + "info == returns url of song playing\n\n"
+                + "info == returns url of song playing and time remaining\n\n"
                 + "ls/list == displays the names of the songs on the queue\n\n"
                 + "try again == restats the stream (use when bot just for some odd reason wont play)\n\n"
                 + "kill queue == kills the queue(includes current song playing)\n\n"
@@ -95,8 +94,8 @@
                 + "rm Playlist_Name == deletes the playlist (can only be done by creator of the playlist)\n\n"
                 + "add Playlist_Name Search_Request/YouTube_URL == will add the search request to the playlist\n\n"
                 + "delete Playlist_Name Key_Words/Youtube_URL == will remove all songs with Key_Words/url\n\n"
-                + "load Playlist_Name == the playlist will be randomly added to the queue"
-                + "ls/list Playlist_Name == displays all songs from the playlist"
+                + "load Playlist_Name == the playlist will be randomly added to the queue\n\n"
+                + "ls/list Playlist_Name == displays all songs from the playlist\n\n"
                 + "```");
     }
 
@@ -122,7 +121,7 @@
         }
         var urlString = "";
         getYouTubeURL(search,numURLs,(urlString)=> {
-            message.channel.send(urlString);
+          message.channel.send(urlString);
         });
     }
 
@@ -207,8 +206,10 @@
 
     //sends url of playing song to channel
     if(msg == "info")
-        if(queue[0])
+        if(queue[0]) {
+            console.log(connectionGlobal.dispatcher.time);
             message.channel.send(queue[0].url);
+        }
         else
             message.channel.send("There is nothing playing >//<");
     
@@ -218,7 +219,10 @@
             let list = "";
             for(let i = 0; i < queue.length; i++)
                list += i + ": " + queue[i].name + "\n";
-            message.channel.send(list);
+            bigPrint(list, (arr) => {
+                for(let i = 0; i < arr.length; i++)
+                    message.channel.send(arr[i]);
+            });
         }
         else
             message.channel.send("There is nothing playing >//<");
@@ -435,11 +439,16 @@
                 if(found) {
                     fs.readFile(PYLS_DIR+command[1].toLowerCase()+".txt", function(err, data){
                         let songs = data.toString().substring(data.toString().indexOf("\n")+1).split("\n");
-                        let names = "";
+                        let nameStr = "";
+                        let nameArr = [];
                         songs.forEach(song => {
-                            names += song.substring(0,song.indexOf(';'))+"\n";
+                            nameStr += song.substring(0,song.indexOf(';'))+"\n";
                         });
-                        message.channel.send("Songs:\n"+names);
+                        bigPrint(nameStr, (arr) => {
+                            message.channel.send("Songs:\n"+arr[0]);
+                            for(let i = 1; i < arr.length; i++)
+                                message.channel.send(arr[j]);
+                        });
                     });
                 }
                 else
@@ -517,6 +526,19 @@
         });
  }
 
+//<span class="video-time" aria-hidden="
+/*
+Tokyo Ghoul - Glassy Sky [東京喰種 -トーキョーグール-]</a></li><li class="yt-lockup-p
+laylist-item clearfix"><span class="yt-lockup-playlist-item-length"><span aria-label=" 4:55
+
+ME!ME!ME! - Daoko feat. TeddyLoid (Original) (1440p)</a></li><li class="yt-lockup-p
+laylist-item clearfix"><span class="yt-lockup-playlist-item-length"><span aria-label="
+
+Playlist</span></h3><div class="yt-lockup-byline ">YouTube</div><ol class="yt-lockup-meta yt-lockup-playlist-items"><li class="yt-lockup-playlist-item clearfix"><span class="yt-lockup-playlist-item-length"><span aria-label="
+
+*/
+
+ 
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  function getYouTubeTitle(link,callback) {
     //console.log('!'+link);
@@ -577,4 +599,34 @@
 
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  
+ function bigPrint( str, callback) {
+    let smallEnough = false; // = (nameStr.length < 1990) //discord has a 2000 word maximum per message
+    let i = 0;
+    let strArr = [];
+    do {  
+        if(str.length > 1990) {
+            let goodsize = false;
+            strArr[i] = "";
+            while(!goodsize)
+                if(strArr[i].length + str.indexOf("\n") < 1990) {
+                    strArr[i] += str.substring(0,str.indexOf("\n")+1)
+                    str = str.substring(str.indexOf("\n")+1);
+                }
+                else {
+                    goodsize = true;
+                    i++;
+                }
+        }
+        else {
+            strArr[i] = str;
+            smallEnough = true;
+            i++;
+        }
+    } while (!smallEnough);
+    callback(strArr);
+    return;
+ }
+
+ ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
  bot.login(TOKEN);
