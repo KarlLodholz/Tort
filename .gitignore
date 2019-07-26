@@ -1,5 +1,4 @@
 node_modules/*
 report*
 settings.json
-package-lock.json
 package.json
