@@ -1,5 +1,5 @@
 {
-  "token": "insert token here"
-  "command_channel_id: "insert command_channel_id here"
+  "token": "insert token here",
+  "command_channel_id": "insert command_channel_id here",
   "test_channel_id": "insert test_channel_id here (if you dont want a test channel, just use the same id for the this and the command_channel_id)" 
 }
