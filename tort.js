@@ -14,8 +14,9 @@
  const INIT_VOL = 25;
  const YOUTUBE_URL_VIDEO = "https://www.youtube.com/watch?v=";
  const YOUTUBE_URL_SEARCH = "https://www.youtube.com/results?search_query=";
- const TEST_CHANNEL_ID = 428015548325036032;
- const MUSIC_CHANNEL_ID = 598554308585455629;
+ const TEST_CHANNEL_ID = jsonData.test_channel_id;
+ const MUSIC_CHANNEL_ID = jsonData.command_channel_id;
+ 
  const HTML_URL_INDEX = "<li><div class=\"yt-lockup yt-lockup-tile yt-lockup-video vve-check clearfix\" data-context-item-id=\""
  const PYLS_DIR = "./playlists/";
  var volume = INIT_VOL;
