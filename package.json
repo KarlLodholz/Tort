@@ -1,0 +1,20 @@
+{
+  "name": "tort-music-bot",
+  "version": "1.0.0",
+  "description": "its a babe",
+  "author": "Karl",
+  "main": "tort.js",
+  "engines": {
+    "node": "12.x"
+  },
+  "scripts": {
+    "start": "node tort.js"
+  },
+  "dependencies": {
+    "discord.js": "^12.1.1",
+    "opusscript": "0.0.7",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.5",
+    "ytdl-core": "^2.0.1"
+  }
+}
