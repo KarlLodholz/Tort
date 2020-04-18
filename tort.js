@@ -120,6 +120,11 @@
                 + "```");
     }
 
+
+    if(command[0].includes("beep")) {
+        console.log(connectionGlobal.dispatcher.speaking);
+    }
+
     //search command
     if(command[0].toLowerCase().includes(SEARCH)) {
         var search = msg.substring(msg.indexOf(" ")+1);
@@ -489,7 +494,7 @@
         let stream = ytdl(queue[0].url,{filter: "audioonly"})
         connection.play(stream);
         updateVol(connection);
-        connection.dispatcher.on('end',() => {
+        connection.dispatcher.on('finish',() => {
             playing = false;
             queue.shift();
             if(queue[0])
