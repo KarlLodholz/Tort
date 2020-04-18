@@ -11,8 +11,8 @@
     "start": "node tort.js"
   },
   "dependencies": {
+    "@discordjs/opus": "github:discordjs/opus",
     "discord.js": "^12.1.1",
-    "opusscript": "0.0.7",
     "request": "^2.88.2",
     "request-promise": "^4.2.5",
     "ytdl-core": "^2.0.1"

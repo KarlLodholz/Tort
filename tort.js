@@ -25,6 +25,28 @@
  var rp = require('request-promise');
 
  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ //Commands
+ const HELP = "help";
+ const SEARCH = "search";
+ const PLAY = "play";
+ const SKIP = "skip";
+ const RESUME = "play";
+ const VOLUME = "vol";
+ const VOLUME_RESET = "volreset";
+ const VOLUME_MAX = "volmax";
+ const SONG_INFO = "info";
+ const LIST_QUEUE = "list";
+ const RESET_STREAM = "try again";
+ const DELETE_QUEUE = "kill queue";
+ const LIST_PLAYLISTS = "playlists";
+ const CREATE_PLAYLIST = "touch playlist";
+ const DELETE_PLAYLIST = "rm";
+ const ADD_TO_PLAYLIST = "add";
+ const REMOVE_SONG_FROM_PLAYLIST = "delete";
+ const LOAD_PLAYLIST = "add";
+ const DISPLAY_SONGS_IN_PLAYLIST = "ls";
+
+ ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  //POTENTIAL ADD-ONS and problems
  //cant play mature content
  //cant play streams/live videos
@@ -99,10 +121,11 @@
     }
 
     //search command
-    if(command[0].toLowerCase().includes("search")) {
+    if(command[0].toLowerCase().includes(SEARCH)) {
         var search = msg.substring(msg.indexOf(" ")+1);
         let numURLs = 1;
-        let vidRequest = msg.substring(6,msg.indexOf(" "));
+        let vidRequest = msg.substring(SEARCH.length,msg.indexOf(" "));
+        console.log(vidRequest);
         //processing search request for number of videos
         if(vidRequest != "") {
             if(parseInt(vidRequest) != NaN)
@@ -126,13 +149,13 @@
 
     //play command
     if(command[0].toLowerCase() == "play" && command[1]) {
-        if(message.member.voiceChannelID) { //if in a voice channel
+        if(message.member.voice.channelID) { //if in a voice channel
             var linkcallback = (link) => {
                 getYouTubeTitle(link,(title) => {
                     var song = new Song(link,title)
                     queue.push(song);
 
-                    message.member.voiceChannel.join()
+                    message.member.voice.channel.join()
                     .then(connection => {
                         //message.channel.send("OwO has arrived");
                         connectionGlobal = connection;
@@ -236,7 +259,7 @@
 
         queue = [];
         connectionGlobal.dispatcher.end();
-        message.member.voiceChannel.join()
+        message.member.voice.channel.join()
             .then(connection => {
                 for(let i = 0; i < tempQ.length; i++)
                     queue[i] = new Song(tempQ[i].url,tempQ[i].name);
@@ -400,7 +423,7 @@
                         found = true;
                 });
                 if(found) {
-                    if(message.member.voiceChannelID) { //if in a voice channel
+                    if(message.member.voice.channelID) { //if in a voice channel
                         fs.readFile(PYLS_DIR+command[1].toLowerCase()+".txt", function(err, data) {
                             let songs = data.toString().substring(data.toString().indexOf("\n")+1).split("\n");
                             shuffle(songs);
@@ -408,16 +431,16 @@
                                 var vid = new Song(song.substring(song.indexOf(';')+1),song.substring(0,song.indexOf(';')));
                                 queue.push(vid);
                             });
-                            message.member.voiceChannel.join()
+                            message.member.voice.channel.join()
                             .then(connection => {
                                 connectionGlobal = connection;
                                 Play(connectionGlobal,message.guild);
                             }).catch(console.log);
                         });
                     }
-                    else
+                    else { 
                         message.channel.send("Get in a voice channel and try again.");
-
+                    }
                 }
                 else
                     message.channel.send("There is no playlist named: "+command[1].toLowerCase());
@@ -464,7 +487,7 @@
         playing = true;
         guild.me.setNickname(queue[0].name.substring(0,32));
         let stream = ytdl(queue[0].url,{filter: "audioonly"})
-        connection.playStream(stream);
+        connection.play(stream);
         updateVol(connection);
         connection.dispatcher.on('end',() => {
             playing = false;
