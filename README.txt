@@ -1,3 +1,5 @@
+Currently broken due to the discord.js update no longer being compatible with some dependancies I used.
+
 This is a music bot.  
 
 Please install node.js, npm, and ffmpeg for this bot to work.
